@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Трекер">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0d12">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Трекер · Препараты и Тренировки</title>
+<style>
+  :root{
+    --bg:#0b0d12; --bg2:#12151e; --card:#161a26; --card2:#1c2130;
+    --line:#242a3a; --txt:#e8ecf5; --mut:#8b93a7; --mut2:#5f6678;
+    --acc:#4f8cff; --acc2:#6ad1a8; --warn:#ffb24d; --bad:#ff5d6c;
+    --ok:#2dd4a0; --rad:16px; --shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    font-size:16px;overscroll-behavior-y:none}
+  body{padding:env(safe-area-inset-top) 0 0 0}
+  .wrap{max-width:760px;margin:0 auto;padding:0 16px 120px}
+  header{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--bg) 70%,transparent);
+    padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  header .ttl{font-size:20px;font-weight:700;letter-spacing:.2px}
+  header .ttl small{display:block;font-size:12px;color:var(--mut);font-weight:500;margin-top:2px}
+  .iconbtn{background:var(--card);border:1px solid var(--line);color:var(--txt);
+    width:40px;height:40px;border-radius:12px;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .iconbtn:active{transform:scale(.94)}
+
+  /* tabs */
+  .tabs{position:fixed;bottom:0;left:0;right:0;z-index:40;background:rgba(14,17,25,.92);
+    backdrop-filter:blur(14px);border-top:1px solid var(--line);
+    display:flex;padding:8px 10px calc(8px + env(safe-area-inset-bottom));gap:6px;max-width:760px;margin:0 auto}
+  .tab{flex:1;text-align:center;padding:9px 4px;border-radius:12px;color:var(--mut);
+    font-size:11px;font-weight:600;cursor:pointer;transition:.15s}
+  .tab .ic{font-size:21px;display:block;margin-bottom:3px;line-height:1}
+  .tab.on{color:var(--txt);background:var(--card)}
+  .tab.on .ic{filter:drop-shadow(0 0 10px rgba(79,140,255,.5))}
+
+  .view{display:none;animation:fade .2s ease}
+  .view.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .sec-h{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 10px}
+  .sec-h h2{font-size:15px;margin:0;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+  .count{font-size:12px;color:var(--mut2)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .row{display:flex;align-items:center;gap:12px}
+  .grow{flex:1;min-width:0}
+
+  /* check item */
+  .item{display:flex;align-items:center;gap:13px;padding:13px 14px;background:var(--card);
+    border:1px solid var(--line);border-radius:14px;margin-bottom:9px;transition:.15s}
+  .item.done{opacity:.55;background:var(--bg2)}
+  .chk{width:30px;height:30px;border-radius:9px;border:2px solid var(--mut2);flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;cursor:pointer;transition:.15s}
+  .chk.on{background:var(--ok);border-color:var(--ok)}
+  .item .nm{font-weight:600;font-size:15px}
+  .item .sub{font-size:13px;color:var(--mut);margin-top:2px}
+  .item.done .nm{text-decoration:line-through;text-decoration-color:var(--mut2)}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;
+    background:var(--card2);color:var(--mut);margin-right:5px}
+  .pill.time{background:rgba(79,140,255,.15);color:#8fb4ff}
+  .pill.now{background:rgba(255,178,77,.18);color:var(--warn)}
+
+  .empty{text-align:center;color:var(--mut2);padding:38px 16px;font-size:14px;line-height:1.6}
+  .empty .big{font-size:40px;display:block;margin-bottom:10px;opacity:.6}
+
+  button.primary,a.primary{background:var(--acc);color:#fff;border:none;border-radius:13px;
+    padding:13px 16px;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;
+    align-items:center;justify-content:center;gap:8px;text-decoration:none;width:100%}
+  button.primary:active{transform:scale(.98)}
+  button.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;
+    padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer}
+  button.danger{background:transparent;color:var(--bad);border:1px solid rgba(255,93,108,.3)}
+  .mini{font-size:13px;padding:7px 11px;border-radius:10px;width:auto}
+
+  /* dashboard date */
+  .today-hd{display:flex;align-items:baseline;justify-content:space-between;margin:4px 2px 14px}
+  .today-hd .d1{font-size:26px;font-weight:700}
+  .today-hd .d2{font-size:13px;color:var(--mut)}
+  .progress{height:8px;background:var(--card2);border-radius:999px;overflow:hidden;margin:6px 0 2px}
+  .progress i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:.4s}
+
+  /* workout */
+  .wk-day{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);margin-bottom:12px;overflow:hidden}
+  .wk-head{padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer}
+  .wk-head .wt{font-weight:700;font-size:16px}
+  .wk-head .ws{font-size:12px;color:var(--mut);margin-top:2px}
+  .wk-head .arw{color:var(--mut2);transition:.2s;font-size:14px}
+  .wk-day.open .arw{transform:rotate(90deg)}
+  .wk-body{display:none;border-top:1px solid var(--line);padding:6px 12px 12px}
+  .wk-day.open .wk-body{display:block}
+  .ex{padding:12px 2px;border-bottom:1px solid var(--line)}
+  .ex:last-child{border-bottom:none}
+  .ex-top{display:flex;align-items:flex-start;gap:12px}
+  .ex .en{font-weight:600;font-size:15px}
+  .ex .em{font-size:13px;color:var(--mut);margin-top:3px;white-space:pre-wrap}
+  .ex-media{margin-top:10px;border-radius:12px;overflow:hidden;background:#000}
+  .ex-media img{width:100%;display:block;max-height:280px;object-fit:cover}
+  .ex-media .vwrap{position:relative;width:100%;padding-top:56.25%}
+  .ex-media iframe,.ex-media video{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .ex-actions{display:flex;gap:8px;margin-top:10px}
+
+  /* modal */
+  .ov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+    display:none;align-items:flex-end;justify-content:center}
+  .ov.on{display:flex}
+  .sheet{background:var(--bg2);border:1px solid var(--line);border-radius:22px 22px 0 0;
+    width:100%;max-width:760px;max-height:92vh;overflow:auto;padding:8px 18px calc(24px + env(safe-area-inset-bottom));
+    animation:up .25s cubic-bezier(.2,.8,.2,1)}
+  @keyframes up{from{transform:translateY(100%)}to{transform:none}}
+  .sheet .grab{width:40px;height:5px;background:var(--mut2);border-radius:999px;margin:8px auto 14px;opacity:.5}
+  .sheet h3{margin:0 0 16px;font-size:19px}
+  label.fld{display:block;margin-bottom:14px}
+  label.fld .lb{display:block;font-size:13px;color:var(--mut);margin-bottom:6px;font-weight:600}
+  input,textarea,select{width:100%;background:var(--card);border:1px solid var(--line);color:var(--txt);
+    border-radius:12px;padding:12px 13px;font-size:16px;font-family:inherit}
+  textarea{resize:vertical;min-height:62px}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--acc)}
+  .days{display:flex;gap:6px;flex-wrap:wrap}
+  .day{flex:1;min-width:40px;text-align:center;padding:10px 0;background:var(--card);border:1px solid var(--line);
+    border-radius:11px;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer;transition:.12s}
+  .day.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .times-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .time-chip{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:6px 8px;font-size:14px}
+  .time-chip b{color:#8fb4ff}
+  .time-chip span{color:var(--bad);cursor:pointer;font-size:16px;line-height:1}
+  .sheet-actions{display:flex;gap:10px;margin-top:8px}
+  .sheet-actions .primary{flex:2}
+  .sheet-actions .ghost{flex:1}
+  .ex-edit{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;position:relative}
+  .ex-edit .rm{position:absolute;top:8px;right:10px;color:var(--bad);cursor:pointer;font-size:20px}
+  .hint{font-size:12px;color:var(--mut2);margin-top:-8px;margin-bottom:14px;line-height:1.5}
+  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px;margin-bottom:14px}
+  .seg div{flex:1;text-align:center;padding:9px;border-radius:9px;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer}
+  .seg div.on{background:var(--acc);color:#fff}
+
+  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--card2);border:1px solid var(--line);color:var(--txt);padding:12px 18px;border-radius:13px;
+    font-size:14px;z-index:90;opacity:0;transition:.25s;pointer-events:none;box-shadow:var(--shadow);max-width:90%}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .banner{background:linear-gradient(135deg,rgba(79,140,255,.14),rgba(106,209,168,.1));
+    border:1px solid rgba(79,140,255,.3);border-radius:14px;padding:13px 15px;margin-bottom:14px;font-size:13px;line-height:1.5;color:#cfe0ff}
+  .banner b{color:#fff}
+  .set-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+  .set-row:last-child{border:none}
+  .set-row .st{font-weight:600}
+  .set-row .ss{font-size:13px;color:var(--mut);margin-top:3px}
+  .streak{display:inline-flex;align-items:center;gap:6px;background:rgba(255,178,77,.14);
+    color:var(--warn);padding:5px 11px;border-radius:999px;font-size:13px;font-weight:600}
+
+  /* calendar */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 14px}
+  .cal-head .mname{font-size:18px;font-weight:700}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cal-dow{text-align:center;font-size:11px;color:var(--mut2);font-weight:700;padding-bottom:4px}
+  .cal-cell{aspect-ratio:1;border:1px solid var(--line);background:var(--card);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;font-size:15px;font-weight:600;transition:.1s}
+  .cal-cell:active{transform:scale(.93)}
+  .cal-cell.today{border-color:var(--acc);color:#8fb4ff}
+  .cal-cell.sel{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .cal-dots{display:flex;gap:3px;position:absolute;bottom:6px}
+  .cal-dots i{width:5px;height:5px;border-radius:50%}
+  .cal-dots .m{background:var(--acc2)}
+  .cal-dots .w{background:var(--warn)}
+  .cal-cell.sel .cal-dots i{background:rgba(255,255,255,.9)}
+  .cal-legend{display:flex;gap:16px;justify-content:center;margin-top:12px;font-size:12px;color:var(--mut)}
+  .cal-legend i.d{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+  .cal-legend i.m{background:var(--acc2)}
+  .cal-legend i.w{background:var(--warn)}
+  .cal-detail{margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="ttl">Трекер<small id="hd-sub">препараты · тренировки</small></div>
+  <div class="row" style="gap:8px">
+    <div class="iconbtn" id="btn-notif" title="Уведомления">🔔</div>
+    <div class="iconbtn" id="btn-set" title="Настройки">⚙️</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===== СЕГОДНЯ ===== -->
+  <section class="view on" id="v-today">
+    <div class="today-hd">
+      <div><div class="d1" id="td-day">—</div><div class="d2" id="td-date">—</div></div>
+      <div id="td-streak"></div>
+    </div>
+    <div class="card" id="td-progress-card" style="display:none">
+      <div class="row"><div class="grow"><b id="td-prog-txt">—</b></div></div>
+      <div class="progress"><i id="td-prog-bar" style="width:0"></i></div>
+    </div>
+
+    <div class="sec-h"><h2>💊 Приём сегодня</h2><span class="count" id="td-med-count"></span></div>
+    <div id="td-meds"></div>
+
+    <div class="sec-h"><h2>🏋️ Тренировка сегодня</h2></div>
+    <div id="td-workout"></div>
+  </section>
+
+  <!-- ===== ПРЕПАРАТЫ ===== -->
+  <section class="view" id="v-meds">
+    <div class="banner">Добавь препарат, выбери дни недели и время приёма. В день приёма он появится в «Сегодня», а при открытом приложении придёт напоминание в заданное время.</div>
+    <div class="sec-h"><h2>Мои препараты</h2><span class="count" id="meds-count"></span></div>
+    <div id="meds-list"></div>
+    <button class="primary" id="add-med">＋ Добавить препарат</button>
+  </section>
+
+  <!-- ===== КАЛЕНДАРЬ ===== -->
+  <section class="view" id="v-cal">
+    <div class="cal-head">
+      <div class="iconbtn" id="cal-prev">‹</div>
+      <div class="mname" id="cal-mname">—</div>
+      <div class="iconbtn" id="cal-next">›</div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-legend">
+      <span><i class="d m"></i>приём</span>
+      <span><i class="d w"></i>тренировка</span>
+    </div>
+    <div class="cal-detail" id="cal-detail"></div>
+  </section>
+
+  <!-- ===== ТРЕНИРОВКИ ===== -->
+  <section class="view" id="v-wk">
+    <div class="banner">Создай дни программы (например «День A — грудь/трицепс»), назначь дни недели и добавь упражнения с подходами, картинкой и видео-техникой. Отмечай выполнение прямо в «Сегодня».</div>
+    <div class="sec-h"><h2>Программа</h2><span class="count" id="wk-count"></span></div>
+    <div id="wk-list"></div>
+    <button class="primary" id="add-wk">＋ Добавить день программы</button>
+  </section>
+
+</div>
+
+<!-- tab bar -->
+<nav class="tabs">
+  <div class="tab on" data-v="today"><span class="ic">📅</span>Сегодня</div>
+  <div class="tab" data-v="cal"><span class="ic">🗓️</span>Календарь</div>
+  <div class="tab" data-v="meds"><span class="ic">💊</span>Препараты</div>
+  <div class="tab" data-v="wk"><span class="ic">🏋️</span>Трен-ки</div>
+</nav>
+
+<!-- overlay / sheets -->
+<div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ---------- storage ---------- */
+function curProfile(){const h=(location.hash||"").replace(/^#/,"").replace(/[^a-z0-9_-]/gi,"").slice(0,24);return h||"main";}
+let PROFILE=curProfile();
+let KEY="pillgym_v1_"+PROFILE;
+function updateProfileLabel(){const s=document.getElementById("hd-sub");if(s)s.textContent=PROFILE==="main"?"препараты · тренировки":"профиль: "+PROFILE;}
+const WD=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"]; // Mon..Sun, index = (getDay()+6)%7
+const WD_FULL=["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота","Воскресенье"];
+const MON=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const MON_NOM=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+
+let DB=load();
+function load(){
+  try{const r=JSON.parse(localStorage.getItem(KEY));
+    if(r&&r.meds&&r.workouts&&r.log) return r;}catch(e){}
+  return {meds:[],workouts:[],log:{},notifiedToday:{},notifDate:""};
+}
+let DBREF=null, saveT=null;
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}
+  if(DBREF){clearTimeout(saveT);saveT=setTimeout(cloudPush,400);}
+}
+function cloudPush(){if(!DBREF)return;try{DBREF.set({blob:JSON.stringify(DB),at:Date.now()}).catch(()=>{});}catch(e){}}
+async function initCloud(){
+  try{
+    if(!(window.claude&&claude.use))return;
+    const db=await claude.use("db"); if(!db)return;
+    const user=await claude.use("user"); if(!user)return;
+    let id; try{id=await user.id();}catch(e){return;}
+    if(!id)return;
+    DBREF=db.collection("data/users/"+id).doc("state_"+PROFILE);
+    let snap; try{snap=await DBREF.get();}catch(e){snap=null;}
+    const data=snap?(typeof snap.data==="function"?snap.data():snap.data):null;
+    if(data&&data.blob){
+      try{const p=JSON.parse(data.blob);
+        if(p&&Array.isArray(p.meds)&&Array.isArray(p.workouts)){DB=p;try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}renderAll();}
+      }catch(e){}
+    }else{
+      cloudPush(); // первый раз — заливаем текущее локальное состояние в облако
+    }
+  }catch(e){}
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+/* ---------- date helpers ---------- */
+function todayKey(d=new Date()){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function weekdayIdx(d=new Date()){return (d.getDay()+6)%7;} // Mon=0
+function nowHM(){const d=new Date();return d.getHours()*60+d.getMinutes();}
+function hmToMin(s){const[a,b]=s.split(":").map(Number);return a*60+b;}
+function dateFromKey(k){const[y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d);}
+function daysBetween(k1,k2){return Math.round((dateFromKey(k2)-dateFromKey(k1))/86400000);}
+function fmtShort(k){if(!k)return"";const p=k.split("-");return p[2]+"."+p[1];}
+function medDueOn(m,d){
+  if(m.mode==="interval"){
+    if(!m.start)return false;
+    const diff=daysBetween(m.start,todayKey(d));
+    return diff>=0 && diff%(m.every||1)===0;
+  }
+  return (m.days||[]).includes(weekdayIdx(d));
+}
+
+/* ---------- log ---------- */
+function logGet(dkey){return DB.log[dkey]||(DB.log[dkey]={});}
+function isDone(dkey,id){return !!logGet(dkey)[id];}
+function toggleDone(dkey,id){const l=logGet(dkey);if(l[id])delete l[id];else l[id]=true;save();}
+
+/* ---------- toast ---------- */
+let tT;
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("on");
+  clearTimeout(tT);tT=setTimeout(()=>t.classList.remove("on"),2200);}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));
+    tab.classList.add("on");
+    document.getElementById("v-"+tab.dataset.v).classList.add("on");
+    if(tab.dataset.v==="today")renderToday();
+    if(tab.dataset.v==="cal")renderCal();
+  };
+});
+
+/* ================= RENDER: TODAY ================= */
+function renderToday(){
+  const d=new Date(), wi=weekdayIdx(d), dk=todayKey(d);
+  document.getElementById("td-day").textContent=WD_FULL[wi];
+  document.getElementById("td-date").textContent=d.getDate()+" "+MON[d.getMonth()]+" "+d.getFullYear();
+
+  // meds due today
+  const meds=DB.meds.filter(m=>medDueOn(m,d));
+  const medBox=document.getElementById("td-meds");
+  document.getElementById("td-med-count").textContent=meds.length?meds.filter(m=>isDone(dk,"med_"+m.id)).length+" / "+meds.length:"";
+  medBox.innerHTML="";
+  if(!meds.length){medBox.innerHTML=`<div class="empty"><span class="big">💊</span>На сегодня приёма нет</div>`;}
+  else{
+    meds.sort((a,b)=>minTime(a)-minTime(b));
+    meds.forEach(m=>{
+      const id="med_"+m.id, done=isDone(dk,id);
+      const times=(m.times||[]).map(t=>{
+        const due=hmToMin(t)<=nowHM()&&!done;
+        return `<span class="pill ${due?'now':'time'}">${t}</span>`;}).join("");
+      const el=document.createElement("div");
+      el.className="item"+(done?" done":"");
+      el.innerHTML=`<div class="chk ${done?'on':''}" data-id="${id}">${done?'✓':''}</div>
+        <div class="grow"><div class="nm">${esc(m.name)}</div>
+        <div class="sub">${times}${m.note?esc(m.note):""}</div></div>`;
+      el.querySelector(".chk").onclick=()=>{toggleDone(dk,id);renderToday();};
+      medBox.appendChild(el);
+    });
+  }
+
+  // workouts today
+  const wks=DB.workouts.filter(w=>w.days.includes(wi));
+  const wbox=document.getElementById("td-workout");
+  wbox.innerHTML="";
+  if(!wks.length){wbox.innerHTML=`<div class="empty"><span class="big">🛌</span>Сегодня тренировки нет — отдых</div>`;}
+  else{
+    wks.forEach(w=>{
+      const total=w.exercises.length;
+      const dcnt=w.exercises.filter(e=>isDone(dk,"ex_"+w.id+"_"+e.id)).length;
+      const head=document.createElement("div");
+      head.className="card";head.style.marginBottom="6px";
+      head.innerHTML=`<div class="row"><div class="grow"><b>${esc(w.title)}</b>
+        <div class="sub" style="color:var(--mut);font-size:13px;margin-top:3px">${dcnt}/${total} упражнений</div></div></div>
+        <div class="progress"><i style="width:${total?dcnt/total*100:0}%"></i></div>`;
+      wbox.appendChild(head);
+      w.exercises.forEach(e=>wbox.appendChild(exNode(e,w.id,dk,true)));
+    });
+  }
+
+  // overall progress
+  const allItems=meds.map(m=>"med_"+m.id)
+    .concat(wks.flatMap(w=>w.exercises.map(e=>"ex_"+w.id+"_"+e.id)));
+  const pc=document.getElementById("td-progress-card");
+  if(allItems.length){
+    const done=allItems.filter(i=>isDone(dk,i)).length;
+    const pct=Math.round(done/allItems.length*100);
+    pc.style.display="block";
+    document.getElementById("td-prog-txt").textContent=`Выполнено на сегодня — ${done} из ${allItems.length} · ${pct}%`;
+    document.getElementById("td-prog-bar").style.width=pct+"%";
+  }else pc.style.display="none";
+
+  // streak
+  const st=calcStreak();
+  document.getElementById("td-streak").innerHTML=st>0?`<span class="streak">🔥 ${st} ${plural(st,"день","дня","дней")}</span>`:"";
+}
+function minTime(m){return (m.times&&m.times.length)?hmToMin(m.times[0]):9999;}
+function plural(n,a,b,c){n=Math.abs(n)%100;const n1=n%10;if(n>10&&n<20)return c;if(n1>1&&n1<5)return b;if(n1===1)return a;return c;}
+
+function calcStreak(){
+  // день засчитан, если был хоть один запланированный пункт и все выполнены
+  let s=0;
+  for(let i=0;i<365;i++){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const wi=weekdayIdx(d),dk=todayKey(d);
+    const meds=DB.meds.filter(m=>medDueOn(m,d)).map(m=>"med_"+m.id);
+    const exs=DB.workouts.filter(w=>w.days.includes(wi)).flatMap(w=>w.exercises.map(e=>"ex_"+w.id+"_"+e.id));
+    const items=meds.concat(exs);
+    if(!items.length){if(i===0)continue;else continue;} // дни без плана не рвут серию и не считаются
+    const allDone=items.every(id=>isDone(dk,id));
+    if(allDone)s++;
+    else{if(i===0)continue; // сегодня ещё можно доделать
+      break;}
+  }
+  return s;
+}
+
+/* exercise node (shared) */
+function exNode(e,wid,dk,withChk,onToggle){
+  const id="ex_"+wid+"_"+e.id, done=isDone(dk,id);
+  const n=document.createElement("div");n.className="ex";
+  let media="";
+  if(e.img)media+=`<div class="ex-media"><img src="${esc(e.img)}" loading="lazy" onerror="this.parentNode.remove()"></div>`;
+  if(e.video){const emb=ytEmbed(e.video);
+    media+=`<div class="ex-media">`+(emb?`<div class="vwrap"><iframe src="${emb}" allowfullscreen allow="encrypted-media"></iframe></div>`:
+      `<div class="vwrap"><video src="${esc(e.video)}" controls playsinline></video></div>`)+`</div>`;}
+  n.innerHTML=`<div class="ex-top">
+      ${withChk?`<div class="chk ${done?'on':''}" data-id="${id}">${done?'✓':''}</div>`:""}
+      <div class="grow"><div class="en" style="${done?'text-decoration:line-through;opacity:.6':''}">${esc(e.name)}</div>
+      ${e.setsReps?`<div class="em"><b style="color:#8fb4ff">${esc(e.setsReps)}</b></div>`:""}
+      ${e.note?`<div class="em">${esc(e.note)}</div>`:""}</div></div>${media}`;
+  if(withChk)n.querySelector(".chk").onclick=()=>{toggleDone(dk,id);(onToggle||renderToday)();};
+  return n;
+}
+function ytEmbed(u){
+  const m=u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/);
+  return m?`https://www.youtube.com/embed/${m[1]}`:null;
+}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ================= RENDER: MEDS ================= */
+function renderMeds(){
+  const box=document.getElementById("meds-list");box.innerHTML="";
+  document.getElementById("meds-count").textContent=DB.meds.length?DB.meds.length:"";
+  if(!DB.meds.length){box.innerHTML=`<div class="empty"><span class="big">💊</span>Пока пусто. Добавь первый препарат ниже.</div>`;return;}
+  DB.meds.forEach(m=>{
+    const el=document.createElement("div");el.className="card";
+    const daysTxt=m.mode==="interval"
+      ? ((m.every||1)===1?"каждый день":"каждые "+m.every+" "+plural(m.every,"день","дня","дней")+" (с "+fmtShort(m.start)+")")
+      : (m.days.length===7?"каждый день":m.days.map(i=>WD[i]).join(" · "));
+    const times=(m.times||[]).map(t=>`<span class="pill time">${t}</span>`).join("");
+    el.innerHTML=`<div class="row"><div class="grow">
+        <div class="nm" style="font-weight:700;font-size:16px">${esc(m.name)}</div>
+        <div class="sub" style="color:var(--mut);font-size:13px;margin-top:5px">${times}</div>
+        <div class="sub" style="color:var(--mut);font-size:13px;margin-top:6px">📅 ${daysTxt}</div>
+        ${m.note?`<div class="sub" style="color:var(--mut);font-size:13px;margin-top:6px">📝 ${esc(m.note)}</div>`:""}
+      </div></div>
+      <div class="ex-actions"><button class="ghost mini" data-ed="${m.id}">✏️ Изменить</button>
+      <button class="ghost mini danger" data-del="${m.id}">🗑 Удалить</button></div>`;
+    el.querySelector("[data-ed]").onclick=()=>medSheet(m);
+    el.querySelector("[data-del]").onclick=()=>askConfirm("Удалить «"+m.name+"»?",()=>{DB.meds=DB.meds.filter(x=>x.id!==m.id);save();renderMeds();toast("Удалено");});
+    box.appendChild(el);
+  });
+}
+
+/* ================= RENDER: WORKOUTS ================= */
+function renderWk(){
+  const box=document.getElementById("wk-list");box.innerHTML="";
+  document.getElementById("wk-count").textContent=DB.workouts.length?DB.workouts.length:"";
+  if(!DB.workouts.length){box.innerHTML=`<div class="empty"><span class="big">🏋️</span>Пока нет дней программы. Создай первый ниже.</div>`;return;}
+  const dk=todayKey();
+  DB.workouts.forEach(w=>{
+    const el=document.createElement("div");el.className="wk-day";
+    const daysTxt=w.days.length?(w.days.length===7?"каждый день":w.days.map(i=>WD[i]).join(" · ")):"дни не заданы";
+    el.innerHTML=`<div class="wk-head">
+        <div class="grow"><div class="wt">${esc(w.title)}</div>
+        <div class="ws">📅 ${daysTxt} · ${w.exercises.length} упр.</div></div>
+        <div class="arw">▶</div></div>
+      <div class="wk-body"></div>`;
+    const body=el.querySelector(".wk-body");
+    w.exercises.forEach(e=>body.appendChild(exNode(e,w.id,dk,false)));
+    const acts=document.createElement("div");acts.className="ex-actions";acts.style.marginTop="12px";
+    acts.innerHTML=`<button class="ghost mini" data-ed>✏️ Редактировать</button>
+      <button class="ghost mini danger" data-del>🗑 Удалить день</button>`;
+    body.appendChild(acts);
+    el.querySelector(".wk-head").onclick=()=>el.classList.toggle("open");
+    acts.querySelector("[data-ed]").onclick=(e)=>{e.stopPropagation();wkSheet(w);};
+    acts.querySelector("[data-del]").onclick=(e)=>{e.stopPropagation();askConfirm("Удалить день «"+w.title+"»?",()=>{DB.workouts=DB.workouts.filter(x=>x.id!==w.id);save();renderWk();toast("Удалено");});};
+    box.appendChild(el);
+  });
+}
+
+/* ================= SHEET: MED ================= */
+function openSheet(html){const s=document.getElementById("sheet");
+  s.innerHTML=`<div class="grab"></div>`+html;document.getElementById("ov").classList.add("on");
+  document.body.style.overflow="hidden";}
+function closeSheet(){document.getElementById("ov").classList.remove("on");document.body.style.overflow="";}
+function askConfirm(msg,onYes,okText){
+  openSheet(`<h3 style="margin:6px 0 18px">${esc(msg)}</h3>
+    <div class="sheet-actions"><button class="primary" id="c-yes" style="background:var(--bad)">${esc(okText||"Удалить")}</button>
+    <button class="ghost" id="c-no">Отмена</button></div>`);
+  document.getElementById("c-yes").onclick=()=>{closeSheet();onYes();};
+  document.getElementById("c-no").onclick=closeSheet;
+}
+document.getElementById("ov").onclick=(e)=>{if(e.target.id==="ov")closeSheet();};
+
+function daysPicker(sel){
+  return `<div class="days">`+WD.map((d,i)=>`<div class="day ${sel.includes(i)?'on':''}" data-d="${i}">${d}</div>`).join("")+`</div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="ghost mini" type="button" id="d-all">Все дни</button>
+    <button class="ghost mini" type="button" id="d-wk">Будни</button><button class="ghost mini" type="button" id="d-clr">Сброс</button></div>`;
+}
+function bindDays(root){
+  root.querySelectorAll(".day").forEach(d=>d.onclick=()=>d.classList.toggle("on"));
+  const set=(arr)=>root.querySelectorAll(".day").forEach(d=>d.classList.toggle("on",arr.includes(+d.dataset.d)));
+  root.querySelector("#d-all").onclick=()=>set([0,1,2,3,4,5,6]);
+  root.querySelector("#d-wk").onclick=()=>set([0,1,2,3,4]);
+  root.querySelector("#d-clr").onclick=()=>set([]);
+}
+function readDays(root){return [...root.querySelectorAll(".day.on")].map(d=>+d.dataset.d);}
+
+function medSheet(m){
+  const ed=!!m; m=m||{id:uid(),name:"",note:"",days:[0,1,2,3,4,5,6],times:["09:00"],mode:"week",every:3,start:todayKey()};
+  if(!m.mode)m.mode="week";
+  let times=[...(m.times||[])];
+  openSheet(`<h3>${ed?"Изменить препарат":"Новый препарат"}</h3>
+    <label class="fld"><span class="lb">Название *</span><input id="m-name" value="${esc(m.name)}" placeholder="Напр. Омега-3"></label>
+    <label class="fld"><span class="lb">Заметка (дозировка, с едой и т.д.)</span><textarea id="m-note" placeholder="2 капсулы во время еды">${esc(m.note)}</textarea></label>
+    <div class="fld"><span class="lb">Время приёма</span>
+      <div class="times-wrap" id="m-times"></div>
+      <div style="display:flex;gap:8px;margin-top:8px"><input type="time" id="m-newtime" value="09:00" style="flex:1">
+      <button class="ghost" type="button" id="m-addtime" style="width:auto">＋ Время</button></div></div>
+    <div class="fld"><span class="lb">Расписание</span>
+      <div class="seg" id="m-mode"><div data-m="week" class="${m.mode!=='interval'?'on':''}">По дням недели</div><div data-m="interval" class="${m.mode==='interval'?'on':''}">Через интервал</div></div>
+      <div id="m-week" style="display:${m.mode==='interval'?'none':'block'}">${daysPicker(m.days)}</div>
+      <div id="m-interval" style="display:${m.mode==='interval'?'block':'none'}">
+        <div style="display:flex;gap:10px">
+          <label class="fld" style="flex:1;margin:0"><span class="lb">Каждые, дней</span><input type="number" id="m-every" min="1" max="60" value="${m.every||3}"></label>
+          <label class="fld" style="flex:1;margin:0"><span class="lb">Начать с</span><input type="date" id="m-start" value="${m.start||todayKey()}"></label>
+        </div>
+        <div class="hint" style="margin-top:8px">Отсчёт идёт от стартовой даты: приём будет в этот день и далее каждые N дней.</div>
+      </div>
+    </div>
+    <div class="sheet-actions"><button class="primary" id="m-save">Сохранить</button><button class="ghost" id="m-cancel">Отмена</button></div>`);
+  const s=document.getElementById("sheet");
+  bindDays(s);
+  let mode=m.mode;
+  s.querySelectorAll("#m-mode div").forEach(b=>b.onclick=()=>{
+    mode=b.dataset.m;
+    s.querySelectorAll("#m-mode div").forEach(x=>x.classList.toggle("on",x===b));
+    document.getElementById("m-week").style.display=mode==="week"?"block":"none";
+    document.getElementById("m-interval").style.display=mode==="interval"?"block":"none";
+  });
+  function drawTimes(){const w=document.getElementById("m-times");
+    w.innerHTML=times.length?times.sort().map((t,i)=>`<div class="time-chip"><b>${t}</b><span data-rt="${i}">×</span></div>`).join(""):`<span style="color:var(--mut2);font-size:13px">нет времени — добавь ниже</span>`;
+    w.querySelectorAll("[data-rt]").forEach(x=>x.onclick=()=>{times.splice(+x.dataset.rt,1);drawTimes();});}
+  drawTimes();
+  document.getElementById("m-addtime").onclick=()=>{const v=document.getElementById("m-newtime").value;if(v&&!times.includes(v)){times.push(v);drawTimes();}};
+  document.getElementById("m-cancel").onclick=closeSheet;
+  document.getElementById("m-save").onclick=()=>{
+    const name=document.getElementById("m-name").value.trim();
+    if(!name){toast("Введи название");return;}
+    const obj={id:m.id,name,note:document.getElementById("m-note").value.trim(),times:times.sort(),mode};
+    if(mode==="interval"){
+      const every=parseInt(document.getElementById("m-every").value,10);
+      if(!every||every<1){toast("Укажи интервал в днях");return;}
+      obj.every=every;obj.start=document.getElementById("m-start").value||todayKey();obj.days=[];
+    }else{
+      const days=readDays(s);if(!days.length){toast("Выбери хотя бы один день");return;}
+      obj.days=days;
+    }
+    const i=DB.meds.findIndex(x=>x.id===m.id);
+    if(i>=0)DB.meds[i]=obj;else DB.meds.push(obj);
+    save();closeSheet();renderMeds();toast(ed?"Сохранено":"Препарат добавлен");resetNotif();
+  };
+}
+
+/* ================= SHEET: WORKOUT ================= */
+function wkSheet(w){
+  const ed=!!w; w=w?JSON.parse(JSON.stringify(w)):{id:uid(),title:"",days:[],exercises:[]};
+  let exs=w.exercises.length?w.exercises:[];
+  openSheet(`<h3>${ed?"Редактировать день":"Новый день программы"}</h3>
+    <label class="fld"><span class="lb">Название дня *</span><input id="w-title" value="${esc(w.title)}" placeholder="День A — грудь / трицепс"></label>
+    <div class="fld"><span class="lb">Дни недели</span>${daysPicker(w.days)}</div>
+    <div class="fld"><span class="lb">Упражнения</span><div id="w-exs"></div>
+      <button class="ghost" type="button" id="w-addex" style="width:100%;margin-top:6px">＋ Добавить упражнение</button></div>
+    <div class="sheet-actions"><button class="primary" id="w-save">Сохранить</button><button class="ghost" id="w-cancel">Отмена</button></div>`);
+  const s=document.getElementById("sheet");
+  bindDays(s);
+  function exEditNode(e){
+    const n=document.createElement("div");n.className="ex-edit";
+    n.innerHTML=`<span class="rm">×</span>
+      <label class="fld"><span class="lb">Упражнение *</span><input class="x-name" value="${esc(e.name)}" placeholder="Жим штанги лёжа"></label>
+      <label class="fld"><span class="lb">Подходы × повторы</span><input class="x-sr" value="${esc(e.setsReps)}" placeholder="4 × 6-8, отдых 2-3 мин"></label>
+      <label class="fld"><span class="lb">Заметка по технике</span><textarea class="x-note" placeholder="Лопатки сведены, пауза внизу">${esc(e.note)}</textarea></label>
+      <label class="fld"><span class="lb">Ссылка на картинку</span><input class="x-img" value="${esc(e.img)}" placeholder="https://.../image.jpg"></label>
+      <label class="fld" style="margin-bottom:4px"><span class="lb">Ссылка на видео (YouTube / mp4)</span><input class="x-video" value="${esc(e.video)}" placeholder="https://youtu.be/..."></label>`;
+    n.querySelector(".rm").onclick=()=>n.remove();
+    return n;
+  }
+  const exBox=document.getElementById("w-exs");
+  exs.forEach(e=>exBox.appendChild(exEditNode(e)));
+  document.getElementById("w-addex").onclick=()=>exBox.appendChild(exEditNode({name:"",setsReps:"",note:"",img:"",video:""}));
+  document.getElementById("w-cancel").onclick=closeSheet;
+  document.getElementById("w-save").onclick=()=>{
+    const title=document.getElementById("w-title").value.trim();
+    if(!title){toast("Введи название дня");return;}
+    const list=[...exBox.querySelectorAll(".ex-edit")].map(n=>({
+      id:uid(),
+      name:n.querySelector(".x-name").value.trim(),
+      setsReps:n.querySelector(".x-sr").value.trim(),
+      note:n.querySelector(".x-note").value.trim(),
+      img:n.querySelector(".x-img").value.trim(),
+      video:n.querySelector(".x-video").value.trim()
+    })).filter(e=>e.name);
+    // сохраняем прежние id упражнений если редактируем (чтобы не слетали отметки)
+    if(ed){const old=DB.workouts.find(x=>x.id===w.id);
+      if(old)list.forEach((e,i)=>{if(old.exercises[i]&&old.exercises[i].name===e.name)e.id=old.exercises[i].id;});}
+    const obj={id:w.id,title,days:readDays(s),exercises:list};
+    const i=DB.workouts.findIndex(x=>x.id===w.id);
+    if(i>=0)DB.workouts[i]=obj;else DB.workouts.push(obj);
+    save();closeSheet();renderWk();toast(ed?"Сохранено":"День добавлен");
+  };
+}
+
+/* ================= NOTIFICATIONS ================= */
+document.getElementById("btn-notif").onclick=async()=>{
+  if(!("Notification"in window)){toast("Браузер не поддерживает уведомления");return;}
+  if(Notification.permission==="granted"){toast("Уведомления уже включены ✓");return;}
+  const p=await Notification.requestPermission();
+  toast(p==="granted"?"Уведомления включены 🔔":"Разреши уведомления в настройках Safari");
+};
+function resetNotif(){DB.notifiedToday={};DB.notifDate=todayKey();save();}
+function checkNotif(){
+  if(!("Notification"in window)||Notification.permission!=="granted")return;
+  const dk=todayKey();
+  if(DB.notifDate!==dk){DB.notifiedToday={};DB.notifDate=dk;save();}
+  const now=nowHM();
+  DB.meds.filter(m=>medDueOn(m,new Date())).forEach(m=>{
+    (m.times||[]).forEach(t=>{
+      const k=m.id+"@"+t, due=hmToMin(t);
+      if(now>=due&&now<due+30&&!DB.notifiedToday[k]&&!isDone(dk,"med_"+m.id)){
+        DB.notifiedToday[k]=true;save();
+        try{new Notification("💊 Пора принять: "+m.name,{body:(m.note||"")+" · "+t,tag:k,renotify:true});}catch(e){}
+      }
+    });
+  });
+}
+setInterval(checkNotif,30000);
+
+/* ================= SETTINGS ================= */
+document.getElementById("btn-set").onclick=()=>{
+  const nStat=("Notification"in window)?(Notification.permission==="granted"?"включены ✓":Notification.permission==="denied"?"заблокированы":"не включены"):"не поддерживаются";
+  openSheet(`<h3>⚙️ Настройки</h3>
+    <div class="banner"><b>Как сделать «как приложение»:</b> открой в Safari → «Поделиться» → «На экран Домой». Иконка появится на рабочем столе iPad и будет открываться на весь экран.</div>
+    <div class="set-row"><div><div class="st">🔔 Уведомления</div><div class="ss">Статус: ${nStat}. Работают, пока приложение открыто.</div></div>
+      <button class="ghost mini" id="s-notif">Включить</button></div>
+    <div class="set-row"><div><div class="st">📤 Экспорт данных</div><div class="ss">Скопируй резервную копию в заметки (Safari может очистить данные)</div></div>
+      <button class="ghost mini" id="s-exp">Копировать</button></div>
+    <textarea id="s-expbox" style="display:none;margin:0 0 14px;min-height:90px;font-size:12px" readonly></textarea>
+    <div class="set-row"><div><div class="st">📥 Импорт данных</div><div class="ss">Из файла .json или вставь скопированный текст</div></div>
+      <div class="row" style="gap:8px"><button class="ghost mini" id="s-imp">Файл</button><button class="ghost mini" id="s-imptxt">Текст</button></div></div>
+    <div class="set-row"><div><div class="st" style="color:var(--bad)">Очистить всё</div><div class="ss">Удалить все препараты, программу и историю</div></div>
+      <button class="ghost mini danger" id="s-wipe">Стереть</button></div>
+    <input type="file" id="s-file" accept="application/json" style="display:none">
+    <div style="margin-top:16px"><button class="ghost" id="s-close" style="width:100%">Закрыть</button></div>`);
+  document.getElementById("s-close").onclick=closeSheet;
+  document.getElementById("s-notif").onclick=document.getElementById("btn-notif").onclick;
+  document.getElementById("s-exp").onclick=async()=>{
+    const txt=JSON.stringify(DB);
+    const box=document.getElementById("s-expbox");box.style.display="block";box.value=txt;
+    try{await navigator.clipboard.writeText(txt);toast("Скопировано в буфер — вставь в заметки");}
+    catch(e){box.focus();box.select();toast("Выдели текст и скопируй вручную");}
+  };
+  function applyImport(txt){try{const d=JSON.parse(txt);
+    if(Array.isArray(d.program)){
+      d.program.forEach(w=>DB.workouts.push({id:uid(),title:w.title||"День",days:Array.isArray(w.days)?w.days:[],
+        exercises:(w.exercises||[]).map(e=>({id:uid(),name:e.name||"",setsReps:e.setsReps||"",note:e.note||"",img:e.img||"",video:e.video||""}))}));
+      save();closeSheet();renderAll();toast("Программа добавлена ✓ ("+d.program.length+" дн.)");
+    } else if(d.meds&&d.workouts){DB=Object.assign({log:{},notifiedToday:{},notifDate:""},d);save();closeSheet();renderAll();toast("Данные восстановлены ✓");}
+    else toast("Неверные данные");
+  }catch(err){toast("Ошибка чтения");}}
+  document.getElementById("s-imp").onclick=()=>document.getElementById("s-file").click();
+  document.getElementById("s-imptxt").onclick=()=>{
+    const box=document.getElementById("s-expbox");
+    box.style.display="block";box.readOnly=false;box.value="";box.placeholder="Вставь сюда скопированный бэкап…";box.focus();
+    if(!document.getElementById("s-impgo")){
+      const b=document.createElement("button");b.id="s-impgo";b.className="ghost mini";b.textContent="Применить импорт";
+      b.style.cssText="width:100%;margin-bottom:14px";b.onclick=()=>applyImport(box.value.trim());
+      box.after(b);
+    }
+  };
+  document.getElementById("s-file").onchange=(e)=>{
+    const f=e.target.files[0];if(!f)return;const r=new FileReader();
+    r.onload=()=>{try{const d=JSON.parse(r.result);if(d.meds&&d.workouts){DB=Object.assign({log:{},notifiedToday:{},notifDate:""},d);save();closeSheet();renderAll();toast("Данные восстановлены ✓");}else toast("Неверный файл");}catch(err){toast("Ошибка чтения файла");}};
+    r.readAsText(f);
+  };
+  document.getElementById("s-wipe").onclick=()=>askConfirm("Удалить ВСЁ без возврата?",()=>{DB={meds:[],workouts:[],log:{},notifiedToday:{},notifDate:""};save();renderAll();toast("Очищено");},"Стереть всё");
+};
+
+/* ================= INIT ================= */
+document.getElementById("add-med").onclick=()=>medSheet(null);
+document.getElementById("add-wk").onclick=()=>wkSheet(null);
+/* ================= CALENDAR ================= */
+let calY=null,calM=null,calSel=null;
+function renderCal(){
+  const t=new Date();
+  if(calY==null){calY=t.getFullYear();calM=t.getMonth();calSel=todayKey();}
+  document.getElementById("cal-mname").textContent=MON_NOM[calM]+" "+calY;
+  const startIdx=(new Date(calY,calM,1).getDay()+6)%7;
+  const daysInMonth=new Date(calY,calM+1,0).getDate();
+  const grid=document.getElementById("cal-grid");
+  let h=WD.map(d=>`<div class="cal-dow">${d}</div>`).join("");
+  for(let i=0;i<startIdx;i++)h+=`<div></div>`;
+  for(let day=1;day<=daysInMonth;day++){
+    const d=new Date(calY,calM,day),dk=todayKey(d);
+    const hasMed=DB.meds.some(m=>medDueOn(m,d));
+    const hasWk=DB.workouts.some(w=>w.days.includes(weekdayIdx(d)));
+    const cls=["cal-cell"];if(dk===todayKey())cls.push("today");if(dk===calSel)cls.push("sel");
+    h+=`<div class="${cls.join(' ')}" data-dk="${dk}">${day}<div class="cal-dots">${hasMed?'<i class="m"></i>':''}${hasWk?'<i class="w"></i>':''}</div></div>`;
+  }
+  grid.innerHTML=h;
+  grid.querySelectorAll("[data-dk]").forEach(c=>c.onclick=()=>{calSel=c.dataset.dk;renderCal();});
+  renderCalDetail();
+}
+function renderCalDetail(){
+  const d=dateFromKey(calSel),dk=calSel,wi=weekdayIdx(d);
+  const wrap=document.getElementById("cal-detail");wrap.innerHTML="";
+  const hd=document.createElement("div");hd.className="sec-h";
+  hd.innerHTML=`<h2>${d.getDate()} ${MON[d.getMonth()]} · ${WD_FULL[wi]}</h2>`;wrap.appendChild(hd);
+
+  const meds=DB.meds.filter(m=>medDueOn(m,d)).sort((a,b)=>minTime(a)-minTime(b));
+  const mh=document.createElement("div");mh.className="sec-h";mh.innerHTML=`<h2 style="color:var(--acc2)">💊 Приём</h2>`;wrap.appendChild(mh);
+  if(!meds.length){const e=document.createElement("div");e.className="empty";e.style.padding="18px";e.textContent="ничего";wrap.appendChild(e);}
+  else meds.forEach(m=>{
+    const id="med_"+m.id,done=isDone(dk,id);
+    const times=(m.times||[]).map(t=>`<span class="pill time">${t}</span>`).join("");
+    const el=document.createElement("div");el.className="item"+(done?" done":"");
+    el.innerHTML=`<div class="chk ${done?'on':''}">${done?'✓':''}</div><div class="grow"><div class="nm">${esc(m.name)}</div><div class="sub">${times}${esc(m.note||"")}</div></div>`;
+    el.querySelector(".chk").onclick=()=>{toggleDone(dk,id);renderCalDetail();};
+    wrap.appendChild(el);
+  });
+
+  const wks=DB.workouts.filter(w=>w.days.includes(wi));
+  const wh=document.createElement("div");wh.className="sec-h";wh.innerHTML=`<h2 style="color:var(--warn)">🏋️ Тренировка</h2>`;wrap.appendChild(wh);
+  if(!wks.length){const e=document.createElement("div");e.className="empty";e.style.padding="18px";e.innerHTML=`<span class="big">🛌</span>отдых`;wrap.appendChild(e);}
+  else wks.forEach(w=>{
+    const t=document.createElement("div");t.className="card";t.style.marginBottom="6px";
+    const dcnt=w.exercises.filter(e=>isDone(dk,"ex_"+w.id+"_"+e.id)).length;
+    t.innerHTML=`<b>${esc(w.title)}</b><div class="sub" style="color:var(--mut);font-size:13px;margin-top:3px">${dcnt}/${w.exercises.length} упражнений</div>`;
+    wrap.appendChild(t);
+    w.exercises.forEach(e=>wrap.appendChild(exNode(e,w.id,dk,true,renderCalDetail)));
+  });
+}
+document.getElementById("cal-prev").onclick=()=>{calM--;if(calM<0){calM=11;calY--;}renderCal();};
+document.getElementById("cal-next").onclick=()=>{calM++;if(calM>11){calM=0;calY++;}renderCal();};
+
+function renderAll(){renderToday();renderMeds();renderWk();if(calY!=null)renderCal();}
+
+// первый запуск — демо-подсказки
+if(DB.meds.length===0&&DB.workouts.length===0&&!localStorage.getItem(KEY)){
+  save();
+}
+updateProfileLabel();
+renderAll();
+checkNotif();
+initCloud();
+window.addEventListener("hashchange",()=>{
+  const p=curProfile();if(p===PROFILE)return;
+  PROFILE=p;KEY="pillgym_v1_"+PROFILE;DBREF=null;DB=load();
+  calY=null;updateProfileLabel();renderAll();initCloud();toast("Профиль: "+PROFILE);
+});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){renderToday();checkNotif();}});
+if("serviceWorker"in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}
+</script>
+</body>
+</html>
